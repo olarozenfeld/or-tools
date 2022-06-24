@@ -975,6 +975,11 @@ message SatParameters {
   // setting keep_all_feasible_solutions_in_presolve ?
   optional bool enumerate_all_solutions = 87 [default = false];
 
+  // A list of variable indices. When specified, the solver will only consider
+  // solutions with different assignments to these variables. Only revelant when
+  // enumerate_all_solutions is set.
+  repeated int32 key_variables = 213;
+
   // If true, we disable the presolve reductions that remove feasible solutions
   // from the search space. Such solution are usually dominated by a "better"
   // solution that is kept, but depending on the situation, we might want to

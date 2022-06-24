@@ -2077,6 +2077,21 @@ std::function<void(Model*)>
 ExcludeCurrentSolutionWithoutIgnoredVariableAndBacktrack() {
   return [=](Model* model) {
     SatSolver* sat_solver = model->GetOrCreate<SatSolver>();
+    // If we have key variables, we need an additional clause to exclude the
+    // current assignment of key variables.
+    std::vector<Literal> clause_to_exclude_solution_key_vars;
+    const SatParameters& parameters = sat_solver->parameters();
+    if (parameters.key_variables_size() > 0) {
+      const auto& assignment = sat_solver->Assignment();
+      for (int i : parameters.key_variables()) {
+        CHECK_GE(i, 0);
+        Literal cur = Literal(BooleanVariable(i), true);
+        bool is_true = (assignment.VariableIsAssigned(i) &&
+                        assignment.LiteralIsTrue(cur));
+        clause_to_exclude_solution_key_vars.push_back(
+            is_true ? cur.Negated() : cur);
+      }
+    }
     IntegerTrail* integer_trail = model->GetOrCreate<IntegerTrail>();
     IntegerEncoder* encoder = model->GetOrCreate<IntegerEncoder>();
 
@@ -2113,6 +2128,9 @@ ExcludeCurrentSolutionWithoutIgnoredVariableAndBacktrack() {
     // the clause will be preprocessed correctly.
     sat_solver->Backtrack(0);
     model->Add(ClauseConstraint(clause_to_exclude_solution));
+    if (!clause_to_exclude_solution_key_vars.empty()) {
+      model->Add(ClauseConstraint(clause_to_exclude_solution_key_vars));
+    }
   };
 }
 
